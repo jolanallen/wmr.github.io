@@ -1,6 +1,8 @@
 // WMR - Web MindMap Recipes
 // Main Entry Point
 
+import './style.css';
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('%c WMR - Web MindMap Recipes %c Loaded ', 
     'background: #00ff9d; color: #05070a; font-weight: bold; padding: 4px; border-radius: 4px 0 0 4px;',
