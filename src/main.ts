@@ -2,12 +2,16 @@
 // Main Entry Point
 
 import './style.css';
+import { initThreeJS } from './scene';
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('%c WMR - Web MindMap Recipes %c Loaded ', 
     'background: #00ff9d; color: #05070a; font-weight: bold; padding: 4px; border-radius: 4px 0 0 4px;',
     'background: #161b22; color: #e0e0e0; padding: 4px; border-radius: 0 4px 4px 0;'
   );
+
+  // Initialize background animation
+  initThreeJS();
 
   // Smooth appearance for sections
   const sections = document.querySelectorAll('section');
