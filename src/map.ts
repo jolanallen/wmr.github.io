@@ -97,12 +97,11 @@ class WMRManager {
   }
 
   private initPanzoom() {
-    // Correction : canvas: false car le container est une div
     this.panzoom = Panzoom(this.container, {
       maxScale: 5,
-      minScale: 0.01,
-      contain: 'outside',
-      startScale: 0.2
+      minScale: 0.005, // Permettre un zoom arrière très large pour les grandes mindmaps
+      contain: undefined, // IMPORTANT: Ne pas restreindre le mouvement
+      startScale: 0.1
     });
 
     const viewport = document.getElementById('map-viewport')!;
@@ -117,9 +116,9 @@ class WMRManager {
     this.container.addEventListener('panzoomchange', (e: any) => {
       const { x, y, scale } = e.detail;
       if (this.starField) {
-        this.starField.position.x = -x * 0.05;
-        this.starField.position.y = y * 0.05;
-        this.starField.scale.setScalar(1 + scale * 0.1);
+        this.starField.position.x = -x * 0.02;
+        this.starField.position.y = y * 0.02;
+        this.starField.scale.setScalar(1 + scale * 0.05);
       }
       this.updateZoomDisplay();
     });
@@ -141,8 +140,17 @@ class WMRManager {
       this.panzoom.zoomOut();
     });
     document.getElementById('zoom-reset')?.addEventListener('click', () => {
-      this.panzoom.reset();
-      this.centerOnContent();
+      this.panzoom.reset({ animate: true });
+      // On recharge le centrage intelligent
+      this.centerOnContent(Array.from(this.nodesLayer.children).map(el => {
+        const nodeEl = el as HTMLElement;
+        return {
+          x: parseInt(nodeEl.style.left),
+          y: parseInt(nodeEl.style.top),
+          width: parseInt(nodeEl.style.width),
+          height: parseInt(nodeEl.style.height)
+        } as CanvasNode;
+      }));
     });
   }
 
@@ -189,13 +197,13 @@ class WMRManager {
       // 3. Contenu
       data.nodes.filter(n => n.type !== 'group').forEach(n => this.renderNode(n));
 
-      setTimeout(() => this.centerOnContent(data.nodes), 50);
+      // Centrage immédiat sans animation au premier chargement
+      this.centerOnContent(data.nodes, false);
     } catch (err) {
       console.error("Erreur critique chargement canvas:", err);
       this.showLoading(false);
     } finally {
-      // On cache l'overlay après un court délai pour laisser le rendu se faire
-      setTimeout(() => this.showLoading(false), 500);
+      setTimeout(() => this.showLoading(false), 300);
     }
   }
 
@@ -223,14 +231,18 @@ class WMRManager {
       const isCanvas = node.file.toLowerCase().endsWith('.canvas');
       if (isCanvas) {
         el.innerHTML = `
-          <div class="file-link-card" style="height:100%">
-            <span class="canvas-badge">Exploration</span>
-            <div class="file-name">${node.file.split('/').pop()?.replace('.canvas', '')}</div>
-            <div class="file-icon" style="font-size:2rem; margin-top:10px">📂</div>
-            <div style="font-size:0.7rem; margin-top:auto; opacity:0.5">Cliquer pour entrer</div>
+          <div class="file-link-card" style="height:100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span class="canvas-badge" style="margin-bottom: 10px;">MindMap</span>
+            <div class="file-name" style="font-size: 1.2rem; font-weight: bold;">${node.file.split('/').pop()?.replace('.canvas', '')}</div>
+            <div class="file-icon" style="font-size:3rem; margin: 15px 0;">📂</div>
+            <div style="font-size:0.8rem; opacity:0.6; color: #00ff9d;">CLIQUEZ POUR EXPLORER</div>
           </div>
         `;
         el.style.cursor = 'pointer';
+        el.style.background = 'rgba(0, 255, 157, 0.03)';
+        el.style.border = '2px solid rgba(0, 255, 157, 0.2)';
+        
+        el.addEventListener('mousedown', (e) => e.stopPropagation());
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           this.loadCanvas(node.file!);
@@ -303,7 +315,7 @@ class WMRManager {
     return colors[c] || c;
   }
 
-  private centerOnContent(nodes?: CanvasNode[]) {
+  private centerOnContent(nodes: CanvasNode[], animate = true) {
     if (!nodes || nodes.length === 0) return;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -319,23 +331,28 @@ class WMRManager {
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
 
-    const padding = 100;
+    const padding = 150;
     const scale = Math.min(
       window.innerWidth / (width + padding),
       window.innerHeight / (height + padding),
       1
     );
     
-    this.panzoom.zoom(scale, { animate: true });
+    // On applique le zoom et le pan
+    this.panzoom.zoom(scale, { animate });
     
-    // On attend la fin du zoom pour paner correctement
-    setTimeout(() => {
-      this.panzoom.pan(
-        window.innerWidth / 2 - centerX * scale,
-        window.innerHeight / 2 - centerY * scale,
-        { animate: true }
-      );
-    }, 100);
+    const xOffset = window.innerWidth / 2 - centerX * scale;
+    const yOffset = window.innerHeight / 2 - centerY * scale;
+
+    if (animate) {
+      setTimeout(() => {
+        this.panzoom.pan(xOffset, yOffset, { animate: true });
+      }, 10);
+    } else {
+      this.panzoom.pan(xOffset, yOffset, { animate: false });
+    }
+    
+    this.updateZoomDisplay();
   }
 
   private showLoading(show: boolean) {
