@@ -14,19 +14,16 @@
     <meta property="og:description" content="L'encyclopédie interactive du Pentest Web. Inspiré par ADMR, porté sur le Web.">
     <meta property="og:image" content="/WMR.png">
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="WMR - Web MindMap Recipes">
-    <meta property="twitter:description" content="L'encyclopédie interactive du Pentest Web. Inspiré par ADMR, porté sur le Web.">
-    <meta property="twitter:image" content="/WMR.png">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/index.css">
+    
+    <!-- CSS Dédié à la vitrine (Fix Scroll) -->
+    <link rel="stylesheet" href="/src/landing.css">
   </head>
   <body>
     <canvas id="stars-canvas"></canvas>
+    
     <header id="header">
       <nav class="container">
         <div class="logo-wrapper">
@@ -50,9 +47,7 @@
             <a href="/mindmap.html" class="btn btn-primary">Explorer la MindMap</a>
             <a href="https://github.com/jolanallen/wmr.github.io" target="_blank" class="btn btn-secondary">Voir sur GitHub</a>
           </div>
-        </div>
-        <div class="hero-preview">
-          <img src="/WMR.png" alt="Logo WMR" class="preview-img logo-hero">
+          <img src="/WMR.png" alt="Logo WMR" class="logo-hero">
         </div>
       </section>
 
@@ -86,11 +81,11 @@
             <div class="text">
               <h2>L'Héritage : De l'AD au Web</h2>
               <p>WMR est né d'une inspiration forte : les mindmaps <strong>ADMR (Active Directory MindMap Recipes)</strong> de l'école 2600 et d'<strong>Orange Cyberdefense</strong>.</p>
-              <p>Ces projets ont révolutionné la manière d'appréhender la sécurité Active Directory. Mon objectif est de porter cette efficacité sur le <strong>Pentest Web</strong>, en créant une ressource interactive aussi complète et intuitive.</p>
+              <p>Mon objectif est de porter cette efficacité sur le <strong>Pentest Web</strong>, en créant une ressource interactive aussi complète et intuitive.</p>
               <a href="https://theimposterz.org/ADMR/#quick-start" target="_blank" class="link-external">Voir ADMR (Inspiration) →</a>
             </div>
             <div class="visual">
-              <img src="/image.png" alt="Aperçu ADMR (Inspiration)" class="side-img">
+              <img src="/image.png" alt="Aperçu ADMR" class="side-img">
               <p class="img-caption">Aperçu de la mindmap ADMR</p>
             </div>
           </div>
@@ -100,7 +95,7 @@
       <section id="contribute" class="container">
         <div class="cta-box">
           <h2>Rejoignez le projet</h2>
-          <p>WMR est un projet vivant. Que vous soyez expert en SQLi, passionné de SSRF ou chasseur de bugs, votre contribution est essentielle pour rendre cette mindmap incontournable.</p>
+          <p>WMR est un projet vivant. Que vous soyez expert en SQLi, passionné de SSRF ou chasseur de bugs, votre contribution est essentielle.</p>
           <a href="https://github.com/jolanallen/wmr.github.io" class="btn btn-large">Contribuer sur GitHub</a>
         </div>
       </section>
@@ -108,14 +103,13 @@
 
     <footer>
       <div class="container footer-content">
-        <p>&copy; 2026 WMR - Web MindMap Recipes. Créé par <a href="https://github.com/jolanallen" target="_blank" class="author-link">jolanallen</a> & <a href="https://github.com/Nothypaa" target="_blank" class="author-link">Nothypaa</a>.</p>
+        <p>&copy; 2026 WMR. Créé par <a href="https://github.com/jolanallen" target="_blank" class="author-link">jolanallen</a> & <a href="https://github.com/Nothypaa" target="_blank" class="author-link">Nothypaa</a>.</p>
         <div class="socials">
           <a href="https://github.com/jolanallen/wmr.github.io" target="_blank">GitHub</a>
         </div>
       </div>
     </footer>
 
-    <!-- Script Vitrine (Vanilla) -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
