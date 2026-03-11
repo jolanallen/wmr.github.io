@@ -23,9 +23,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/index.css">
   </head>
   <body>
-    <canvas id="bg-canvas"></canvas>
+    <canvas id="stars-canvas"></canvas>
     <header id="header">
       <nav class="container">
         <div class="logo-wrapper">
@@ -35,7 +36,7 @@
         <ul class="nav-links">
           <li><a href="#concept">Concept</a></li>
           <li><a href="#inspiration">Inspiration</a></li>
-          <li><a href="#contribute" class="btn btn-outline">Contribuer</a></li>
+          <li><a href="/mindmap.html" class="btn btn-outline">Explorer</a></li>
         </ul>
       </nav>
     </header>
@@ -51,7 +52,6 @@
           </div>
         </div>
         <div class="hero-preview">
-          <!-- Ici on utilise ton logo WMR en grand pour la Hero section -->
           <img src="/WMR.png" alt="Logo WMR" class="preview-img logo-hero">
         </div>
       </section>
@@ -85,12 +85,11 @@
           <div class="inspiration-content">
             <div class="text">
               <h2>L'Héritage : De l'AD au Web</h2>
-              <p>WMR est né d'une inspiration forte : les mindmaps <strong>ADMR (Active Directory MindMap Recipes)</strong> et de la MindMap Active Directory de <strong>Orange Cyberdefense</strong>.</p>
+              <p>WMR est né d'une inspiration forte : les mindmaps <strong>ADMR (Active Directory MindMap Recipes)</strong> de l'école 2600 et d'<strong>Orange Cyberdefense</strong>.</p>
               <p>Ces projets ont révolutionné la manière d'appréhender la sécurité Active Directory. Mon objectif est de porter cette efficacité sur le <strong>Pentest Web</strong>, en créant une ressource interactive aussi complète et intuitive.</p>
               <a href="https://theimposterz.org/ADMR/#quick-start" target="_blank" class="link-external">Voir ADMR (Inspiration) →</a>
             </div>
             <div class="visual">
-              <!-- Ici on utilise image.png qui est l'aperçu de l'ADMR fourni -->
               <img src="/image.png" alt="Aperçu ADMR (Inspiration)" class="side-img">
               <p class="img-caption">Aperçu de la mindmap ADMR</p>
             </div>
@@ -101,8 +100,8 @@
       <section id="contribute" class="container">
         <div class="cta-box">
           <h2>Rejoignez le projet</h2>
-          <p>WMR est un projet vivant. Que vous soyez expert en SQLi, passionné de SSRF ou bughunter, votre contribution est essentielle pour rendre cette mindmap incontournable.</p>
-          <a href="https://github.com/votre-user/wmr" class="btn btn-large">Contribuer sur GitHub</a>
+          <p>WMR est un projet vivant. Que vous soyez expert en SQLi, passionné de SSRF ou chasseur de bugs, votre contribution est essentielle pour rendre cette mindmap incontournable.</p>
+          <a href="https://github.com/jolanallen/wmr.github.io" class="btn btn-large">Contribuer sur GitHub</a>
         </div>
       </section>
     </main>
@@ -116,6 +115,7 @@
       </div>
     </footer>
 
+    <!-- Script Vitrine (Vanilla) -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

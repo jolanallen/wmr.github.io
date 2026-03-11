@@ -4,44 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/WMR.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WMR - Interactive MindMap</title>
+    <title>WMR - MindMap Interactive</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   </head>
-  <body class="map-body">
-    <!-- Grille de points fixes -->
-    <div id="grid-background"></div>
-
-    <header id="obsidian-header">
-      <div class="nav-tools">
-        <div class="history-btns">
-          <button id="btn-back" title="Précédent" disabled>←</button>
-          <button id="btn-forward" title="Suivant" disabled>→</button>
-        </div>
-        <div id="canvas-title">Main-Web_MindMap_Recipes_Full</div>
-      </div>
-      
-      <div class="zoom-tools">
-        <button id="zoom-out" title="Dézoomer">−</button>
-        <span id="zoom-level">100%</span>
-        <button id="zoom-in" title="Zoomer">+</button>
-        <button id="zoom-reset" title="Recadrer">🎯</button>
-      </div>
-    </header>
-
-    <div id="map-viewport">
-      <div id="map-container">
-        <svg id="map-svg-layer"></svg>
-        <div id="map-nodes-layer"></div>
-      </div>
-    </div>
-
-    <div id="loading-overlay">
-      <div class="loader"></div>
-      <p>Chargement du Vault...</p>
-    </div>
-
-    <script type="module" src="/src/map.ts"></script>
+  <body class="bg-[#0b0e14]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
