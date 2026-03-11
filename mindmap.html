@@ -10,13 +10,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   </head>
   <body class="map-body">
+    <!-- Fond étoilé Three.js -->
+    <canvas id="stars-canvas"></canvas>
+
     <div id="map-controls">
-      <a href="/" class="back-btn">← Accueil</a>
-      <div class="map-title">Web MindMap Recipes</div>
+      <div class="controls-left">
+        <a href="/" class="back-home">🏠</a>
+        <div id="breadcrumbs">
+          <span class="crumb">WMR</span>
+        </div>
+      </div>
+      
       <div class="zoom-controls">
-        <button id="zoom-in">+</button>
         <button id="zoom-out">−</button>
-        <button id="zoom-reset">⟲</button>
+        <span id="zoom-level">100%</span>
+        <button id="zoom-in">+</button>
+        <button id="zoom-reset">🎯</button>
       </div>
     </div>
 
@@ -29,7 +38,7 @@
 
     <div id="loading-overlay">
       <div class="loader"></div>
-      <p>Chargement de la MindMap...</p>
+      <p>Initialisation du moteur...</p>
     </div>
 
     <script type="module" src="/src/map.ts"></script>
