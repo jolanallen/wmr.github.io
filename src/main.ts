@@ -15,35 +15,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Smooth appearance for sections
   const sections = document.querySelectorAll('section');
+  
+  const revealSection = (section: HTMLElement) => {
+    section.style.opacity = '1';
+    section.style.transform = 'translateY(0)';
+  };
+
+  // Pre-set initial states
+  sections.forEach(section => {
+    const el = section as HTMLElement;
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+  });
+
+  // Intersection Observer for better performance
   const observerOptions = {
-    threshold: 0.1
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
   };
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
+        revealSection(entry.target as HTMLElement);
+        observer.unobserve(entry.target); // Reveal only once
       }
     });
   }, observerOptions);
 
   sections.forEach(section => {
-    section.style.opacity = '0';
-    section.style.transform = 'translateY(20px)';
-    section.style.transition = 'all 0.6s ease-out';
     observer.observe(section);
   });
 
-  // Adding the visible class logic via JS because it's cleaner than pure CSS for intersection
-  window.addEventListener('scroll', () => {
-    sections.forEach(section => {
-      const rect = section.getBoundingClientRect();
-      if (rect.top < window.innerHeight * 0.8) {
-        section.style.opacity = '1';
-        section.style.transform = 'translateY(0)';
-      }
-    });
-  });
+  // Fallback / Immediate check for Hero
+  setTimeout(() => {
+    const hero = document.querySelector('#hero') as HTMLElement;
+    if (hero) revealSection(hero);
+  }, 100);
 
   // Header background change on scroll
   const header = document.getElementById('header');
