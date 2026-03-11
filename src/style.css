@@ -346,6 +346,27 @@ footer {
   font-size: 0.9rem;
 }
 
+.author-link {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.author-link:hover {
+  text-decoration: underline;
+}
+
+.socials {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.separator {
+  color: rgba(255, 255, 255, 0.1);
+}
+
 .socials a {
   color: var(--text-color);
   text-decoration: none;
