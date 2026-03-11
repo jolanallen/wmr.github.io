@@ -151,32 +151,24 @@ class WMRManager {
     title.textContent = this.history[this.historyIndex].split('/').pop()?.replace('.canvas', '') || 'WMR';
   }
 
-  private async loadCanvas(path: string) {
-    this.showLoading(true);
-    try {
-      const response = await fetch(`${VAULT_ROOT}${path}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data: CanvasData = await response.json();
-      
-      this.nodesLayer.innerHTML = '';
-      this.svgLayer.innerHTML = '';
+  private async render(data: CanvasData) {
+    // Clear layers
+    this.nodesLayer.innerHTML = '';
+    this.svgLayer.innerHTML = '';
 
-      // 1. Groupes
-      data.nodes.filter(n => n.type === 'group').forEach(n => this.renderNode(n));
-      // 2. Liens
-      data.edges.forEach(e => this.renderEdge(e, data.nodes));
-      // 3. Contenu
-      data.nodes.filter(n => n.type !== 'group').forEach(n => this.renderNode(n));
-
-      this.centerOnContent(data.nodes);
-    } catch (err) {
-      console.error("Erreur chargement canvas:", err);
-    } finally {
-      setTimeout(() => this.showLoading(false), 300);
+    // 1. Groupes (Z-index bas)
+    data.nodes.filter(n => n.type === 'group').forEach(n => this.renderNode(n));
+    // 2. Liens
+    data.edges.forEach(e => this.renderEdge(e, data.nodes));
+    // 3. Contenu (Z-index haut)
+    for (const node of data.nodes.filter(n => n.type !== 'group')) {
+      await this.renderNode(node);
     }
+
+    this.centerOnContent(data.nodes);
   }
 
-  private renderNode(node: CanvasNode) {
+  private async renderNode(node: CanvasNode) {
     const el = document.createElement('div');
     el.className = `wmr-node type-${node.type}`;
     el.style.left = `${node.x}px`;
@@ -194,7 +186,9 @@ class WMRManager {
       el.innerHTML = `<div class="group-label" style="border-left: 4px solid ${this.mapColor(node.color || 'default')}">${node.label || 'Groupe'}</div>`;
     } 
     else if (node.type === 'text') {
-      el.innerHTML = marked.parse(node.text || '') as string;
+      // Compilation Markdown synchrone/asynchrone sécurisée
+      const rawText = node.text || '';
+      el.innerHTML = await marked.parse(rawText, { breaks: true, gfm: true });
     } 
     else if (node.type === 'file' && node.file) {
       const isCanvas = node.file.toLowerCase().endsWith('.canvas');
@@ -210,7 +204,7 @@ class WMRManager {
         el.addEventListener('dblclick', () => this.navigateTo(node.file!));
         el.addEventListener('click', (e) => e.stopPropagation());
       } else {
-        el.innerHTML = `<div class="file-content">${marked.parse(node.file)}</div>`;
+        el.innerHTML = `<div class="file-content">Chargement de ${node.file}...</div>`;
         this.fetchMD(el, node.file);
       }
     }
@@ -223,10 +217,11 @@ class WMRManager {
     try {
       const res = await fetch(`${VAULT_ROOT}${path}`);
       if (res.ok) {
-        container.innerHTML = marked.parse(await res.text()) as string;
+        const text = await res.text();
+        container.innerHTML = await marked.parse(text, { breaks: true, gfm: true });
         container.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b as HTMLElement));
       }
-    } catch { /* Link error */ }
+    } catch { /* Error handling */ }
   }
 
   private renderEdge(edge: CanvasEdge, nodes: CanvasNode[]) {
