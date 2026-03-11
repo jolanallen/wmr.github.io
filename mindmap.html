@@ -7,27 +7,28 @@
     <title>WMR - Interactive MindMap</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   </head>
   <body class="map-body">
-    <!-- Fond étoilé Three.js -->
-    <canvas id="stars-canvas"></canvas>
+    <!-- Grille de points fixes -->
+    <div id="grid-background"></div>
 
-    <div id="map-controls">
-      <div class="controls-left">
-        <a href="/" class="back-home">🏠</a>
-        <div id="breadcrumbs">
-          <span class="crumb">WMR</span>
+    <header id="obsidian-header">
+      <div class="nav-tools">
+        <div class="history-btns">
+          <button id="btn-back" title="Précédent" disabled>←</button>
+          <button id="btn-forward" title="Suivant" disabled>→</button>
         </div>
+        <div id="canvas-title">Main-Web_MindMap_Recipes_Full</div>
       </div>
       
-      <div class="zoom-controls">
-        <button id="zoom-out">−</button>
+      <div class="zoom-tools">
+        <button id="zoom-out" title="Dézoomer">−</button>
         <span id="zoom-level">100%</span>
-        <button id="zoom-in">+</button>
-        <button id="zoom-reset">🎯</button>
+        <button id="zoom-in" title="Zoomer">+</button>
+        <button id="zoom-reset" title="Recadrer">🎯</button>
       </div>
-    </div>
+    </header>
 
     <div id="map-viewport">
       <div id="map-container">
@@ -38,7 +39,7 @@
 
     <div id="loading-overlay">
       <div class="loader"></div>
-      <p>Initialisation du moteur...</p>
+      <p>Chargement du Vault...</p>
     </div>
 
     <script type="module" src="/src/map.ts"></script>

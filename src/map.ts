@@ -1,7 +1,6 @@
 import Panzoom from '@panzoom/panzoom';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
-import * as THREE from 'three';
 import 'highlight.js/styles/github-dark.css';
 import './map.css';
 
@@ -41,87 +40,51 @@ class WMRManager {
   private nodesLayer: HTMLElement;
   private svgLayer: SVGSVGElement;
   private panzoom: any;
-  private history: string[] = [MAIN_CANVAS];
   
-  // Three.js Background
-  private starScene: THREE.Scene | null = null;
-  private starCamera: THREE.PerspectiveCamera | null = null;
-  private starRenderer: THREE.WebGLRenderer | null = null;
-  private starField: THREE.Points | null = null;
+  // Navigation History
+  private history: string[] = [];
+  private historyIndex: number = -1;
 
   constructor() {
     this.container = document.getElementById('map-container')!;
     this.nodesLayer = document.getElementById('map-nodes-layer')!;
     this.svgLayer = document.getElementById('map-svg-layer') as unknown as SVGSVGElement;
     
-    this.initStars();
     this.initPanzoom();
     this.setupControls();
-    this.loadCanvas(MAIN_CANVAS);
-  }
-
-  private initStars() {
-    const canvas = document.getElementById('stars-canvas') as HTMLCanvasElement;
-    this.starScene = new THREE.Scene();
-    this.starCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-    this.starRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    this.starRenderer.setSize(window.innerWidth, window.innerHeight);
-
-    const geo = new THREE.BufferGeometry();
-    const count = 3000;
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i++) {
-      pos[i] = (Math.random() - 0.5) * 4000;
-    }
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    
-    const mat = new THREE.PointsMaterial({ size: 2, color: 0x00ff9d, transparent: true, opacity: 0.4 });
-    this.starField = new THREE.Points(geo, mat);
-    this.starScene.add(this.starField);
-
-    const animate = () => {
-      requestAnimationFrame(animate);
-      if (this.starField) {
-        this.starField.rotation.y += 0.0001;
-      }
-      this.starRenderer?.render(this.starScene!, this.starCamera!);
-    };
-    animate();
-
-    window.addEventListener('resize', () => {
-      if (!this.starCamera || !this.starRenderer) return;
-      this.starCamera.aspect = window.innerWidth / window.innerHeight;
-      this.starCamera.updateProjectionMatrix();
-      this.starRenderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    this.setupKeyboard();
+    this.navigateTo(MAIN_CANVAS);
   }
 
   private initPanzoom() {
     this.panzoom = Panzoom(this.container, {
       maxScale: 5,
-      minScale: 0.005, // Permettre un zoom arrière très large pour les grandes mindmaps
-      contain: undefined, // IMPORTANT: Ne pas restreindre le mouvement
+      minScale: 0.005,
+      contain: undefined,
       startScale: 0.1
     });
 
     const viewport = document.getElementById('map-viewport')!;
-    
-    // Zoom à la molette fluide
     viewport.addEventListener('wheel', (e) => {
       this.panzoom.zoomWithWheel(e);
-      this.updateZoomDisplay();
+      this.syncGrid();
     });
 
-    // Effet parallaxe sur les étoiles
-    this.container.addEventListener('panzoomchange', (e: any) => {
-      const { x, y, scale } = e.detail;
-      if (this.starField) {
-        this.starField.position.x = -x * 0.02;
-        this.starField.position.y = y * 0.02;
-        this.starField.scale.setScalar(1 + scale * 0.05);
-      }
+    this.container.addEventListener('panzoomchange', () => {
+      this.syncGrid();
       this.updateZoomDisplay();
     });
+  }
+
+  private syncGrid() {
+    const { x, y, scale } = this.panzoom.getPan();
+    const grid = document.getElementById('grid-background')!;
+    const currentScale = this.panzoom.getScale();
+    
+    // On synchronise la taille de la grille avec le zoom pour garder un repère visuel
+    const size = 30 * currentScale;
+    grid.style.backgroundSize = `${size}px ${size}px`;
+    grid.style.backgroundPosition = `${x}px ${y}px`;
   }
 
   private updateZoomDisplay() {
@@ -133,55 +96,63 @@ class WMRManager {
   }
 
   private setupControls() {
-    document.getElementById('zoom-in')?.addEventListener('click', () => {
-      this.panzoom.zoomIn();
-    });
-    document.getElementById('zoom-out')?.addEventListener('click', () => {
-      this.panzoom.zoomOut();
-    });
-    document.getElementById('zoom-reset')?.addEventListener('click', () => {
-      this.panzoom.reset({ animate: true });
-      // On recharge le centrage intelligent
-      this.centerOnContent(Array.from(this.nodesLayer.children).map(el => {
-        const nodeEl = el as HTMLElement;
-        return {
-          x: parseInt(nodeEl.style.left),
-          y: parseInt(nodeEl.style.top),
-          width: parseInt(nodeEl.style.width),
-          height: parseInt(nodeEl.style.height)
-        } as CanvasNode;
-      }));
-    });
-  }
-
-  private updateBreadcrumbs() {
-    const bc = document.getElementById('breadcrumbs')!;
-    bc.innerHTML = '';
-    this.history.forEach((path, index) => {
-      const span = document.createElement('span');
-      span.className = `crumb ${index === this.history.length - 1 ? 'active' : ''}`;
-      const name = path.split('/').pop()?.replace('.canvas', '') || 'WMR';
-      span.textContent = name;
-      span.onclick = (e) => {
-        e.stopPropagation();
-        if (index < this.history.length - 1) {
-          this.history = this.history.slice(0, index + 1);
-          this.loadCanvas(path, false);
-        }
-      };
-      bc.appendChild(span);
-    });
-  }
-
-  private async loadCanvas(path: string, pushToHistory = true) {
-    console.log(`Chargement du canvas : ${path}`);
-    this.showLoading(true);
+    document.getElementById('zoom-in')?.addEventListener('click', () => this.panzoom.zoomIn());
+    document.getElementById('zoom-out')?.addEventListener('click', () => this.panzoom.zoomOut());
+    document.getElementById('zoom-reset')?.addEventListener('click', () => this.resetView());
     
-    if (pushToHistory && this.history[this.history.length - 1] !== path) {
-      this.history.push(path);
-    }
-    this.updateBreadcrumbs();
+    document.getElementById('btn-back')?.addEventListener('click', () => this.goBack());
+    document.getElementById('btn-forward')?.addEventListener('click', () => this.goForward());
+  }
 
+  private setupKeyboard() {
+    window.addEventListener('keydown', (e) => {
+      const step = 50 / this.panzoom.getScale();
+      if (e.key === 'ArrowUp') this.panzoom.pan(0, step, { relative: true });
+      if (e.key === 'ArrowDown') this.panzoom.pan(0, -step, { relative: true });
+      if (e.key === 'ArrowLeft') this.panzoom.pan(step, 0, { relative: true });
+      if (e.key === 'ArrowRight') this.panzoom.pan(-step, 0, { relative: true });
+    });
+  }
+
+  private navigateTo(path: string, saveHistory = true) {
+    if (saveHistory) {
+      // Nettoyer l'historique futur si on était revenu en arrière
+      this.history = this.history.slice(0, this.historyIndex + 1);
+      this.history.push(path);
+      this.historyIndex++;
+    }
+    this.loadCanvas(path);
+    this.updateNavButtons();
+  }
+
+  private goBack() {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      this.loadCanvas(this.history[this.historyIndex]);
+      this.updateNavButtons();
+    }
+  }
+
+  private goForward() {
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex++;
+      this.loadCanvas(this.history[this.historyIndex]);
+      this.updateNavButtons();
+    }
+  }
+
+  private updateNavButtons() {
+    const btnBack = document.getElementById('btn-back') as HTMLButtonElement;
+    const btnForward = document.getElementById('btn-forward') as HTMLButtonElement;
+    btnBack.disabled = this.historyIndex <= 0;
+    btnForward.disabled = this.historyIndex >= this.history.length - 1;
+    
+    const title = document.getElementById('canvas-title')!;
+    title.textContent = this.history[this.historyIndex].split('/').pop()?.replace('.canvas', '') || 'WMR';
+  }
+
+  private async loadCanvas(path: string) {
+    this.showLoading(true);
     try {
       const response = await fetch(`${VAULT_ROOT}${path}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -190,18 +161,16 @@ class WMRManager {
       this.nodesLayer.innerHTML = '';
       this.svgLayer.innerHTML = '';
 
-      // 1. Groupes (Fond)
+      // 1. Groupes
       data.nodes.filter(n => n.type === 'group').forEach(n => this.renderNode(n));
       // 2. Liens
       data.edges.forEach(e => this.renderEdge(e, data.nodes));
       // 3. Contenu
       data.nodes.filter(n => n.type !== 'group').forEach(n => this.renderNode(n));
 
-      // Centrage immédiat sans animation au premier chargement
-      this.centerOnContent(data.nodes, false);
+      this.centerOnContent(data.nodes);
     } catch (err) {
-      console.error("Erreur critique chargement canvas:", err);
-      this.showLoading(false);
+      console.error("Erreur chargement canvas:", err);
     } finally {
       setTimeout(() => this.showLoading(false), 300);
     }
@@ -218,11 +187,11 @@ class WMRManager {
     if (node.color) {
       const c = this.mapColor(node.color);
       el.style.borderColor = c;
-      if (node.type === 'group') el.style.backgroundColor = `${c}08`;
+      if (node.type === 'group') el.style.backgroundColor = `${c}05`;
     }
 
     if (node.type === 'group') {
-      el.innerHTML = `<div class="group-label">${node.label || 'Sans nom'}</div>`;
+      el.innerHTML = `<div class="group-label" style="border-left: 4px solid ${this.mapColor(node.color || 'default')}">${node.label || 'Groupe'}</div>`;
     } 
     else if (node.type === 'text') {
       el.innerHTML = marked.parse(node.text || '') as string;
@@ -231,31 +200,18 @@ class WMRManager {
       const isCanvas = node.file.toLowerCase().endsWith('.canvas');
       if (isCanvas) {
         el.innerHTML = `
-          <div class="file-link-card" style="height:100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <span class="canvas-badge" style="margin-bottom: 10px;">MindMap</span>
-            <div class="file-name" style="font-size: 1.2rem; font-weight: bold;">${node.file.split('/').pop()?.replace('.canvas', '')}</div>
-            <div class="file-icon" style="font-size:3rem; margin: 15px 0;">📂</div>
-            <div style="font-size:0.8rem; opacity:0.6; color: #00ff9d;">CLIQUEZ POUR EXPLORER</div>
+          <div class="file-card">
+            <span class="badge">Mindmap</span>
+            <div class="icon">📂</div>
+            <div class="title">${node.file.split('/').pop()?.replace('.canvas', '')}</div>
+            <div style="font-size:0.7rem; opacity:0.4">Double-clic pour ouvrir</div>
           </div>
         `;
-        el.style.cursor = 'pointer';
-        el.style.background = 'rgba(0, 255, 157, 0.03)';
-        el.style.border = '2px solid rgba(0, 255, 157, 0.2)';
-        
-        el.addEventListener('mousedown', (e) => e.stopPropagation());
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.loadCanvas(node.file!);
-        });
+        el.addEventListener('dblclick', () => this.navigateTo(node.file!));
+        el.addEventListener('click', (e) => e.stopPropagation());
       } else {
-        el.innerHTML = `
-          <div class="file-node-header">
-            <span class="file-icon">📄</span>
-            <span class="file-name">${node.file.split('/').pop()}</span>
-          </div>
-          <div class="file-content" style="font-size:0.9rem">Chargement du Markdown...</div>
-        `;
-        this.fetchMD(el.querySelector('.file-content')!, node.file);
+        el.innerHTML = `<div class="file-content">${marked.parse(node.file)}</div>`;
+        this.fetchMD(el, node.file);
       }
     }
 
@@ -267,15 +223,10 @@ class WMRManager {
     try {
       const res = await fetch(`${VAULT_ROOT}${path}`);
       if (res.ok) {
-        const text = await res.text();
-        container.innerHTML = marked.parse(text) as string;
+        container.innerHTML = marked.parse(await res.text()) as string;
         container.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b as HTMLElement));
-      } else {
-        container.innerHTML = `<span style="color:red">Fichier introuvable: ${path}</span>`;
       }
-    } catch { 
-      container.innerHTML = 'Erreur réseau'; 
-    }
+    } catch { /* Link error */ }
   }
 
   private renderEdge(edge: CanvasEdge, nodes: CanvasNode[]) {
@@ -289,14 +240,11 @@ class WMRManager {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'wmr-edge');
     
-    const dx = Math.abs(end.x - start.x) * 0.4;
-    const dy = Math.abs(end.y - start.y) * 0.4;
-    
+    // Obsidian Curved Lines Logic
+    const dx = Math.abs(end.x - start.x) * 0.5;
     let cp1x = start.x, cp1y = start.y, cp2x = end.x, cp2y = end.y;
     if (edge.fromSide === 'right') cp1x += dx; else if (edge.fromSide === 'left') cp1x -= dx;
-    if (edge.fromSide === 'bottom') cp1y += dy; else if (edge.fromSide === 'top') cp1y -= dy;
     if (edge.toSide === 'right') cp2x += dx; else if (edge.toSide === 'left') cp2x -= dx;
-    if (edge.toSide === 'bottom') cp2y += dy; else if (edge.toSide === 'top') cp2y -= dy;
 
     path.setAttribute('d', `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`);
     if (edge.color) path.style.stroke = this.mapColor(edge.color);
@@ -315,44 +263,22 @@ class WMRManager {
     return colors[c] || c;
   }
 
-  private centerOnContent(nodes: CanvasNode[], animate = true) {
-    if (!nodes || nodes.length === 0) return;
+  private resetView() {
+    this.panzoom.reset({ animate: true });
+    this.syncGrid();
+  }
 
+  private centerOnContent(nodes: CanvasNode[]) {
+    if (!nodes || nodes.length === 0) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(n => {
-      minX = Math.min(minX, n.x);
-      minY = Math.min(minY, n.y);
-      maxX = Math.max(maxX, n.x + n.width);
-      maxY = Math.max(maxY, n.y + n.height);
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x + n.width); maxY = Math.max(maxY, n.y + n.height);
     });
-
-    const width = maxX - minX;
-    const height = maxY - minY;
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-
-    const padding = 150;
-    const scale = Math.min(
-      window.innerWidth / (width + padding),
-      window.innerHeight / (height + padding),
-      1
-    );
-    
-    // On applique le zoom et le pan
-    this.panzoom.zoom(scale, { animate });
-    
-    const xOffset = window.innerWidth / 2 - centerX * scale;
-    const yOffset = window.innerHeight / 2 - centerY * scale;
-
-    if (animate) {
-      setTimeout(() => {
-        this.panzoom.pan(xOffset, yOffset, { animate: true });
-      }, 10);
-    } else {
-      this.panzoom.pan(xOffset, yOffset, { animate: false });
-    }
-    
-    this.updateZoomDisplay();
+    const scale = Math.min(window.innerWidth / (maxX - minX + 200), window.innerHeight / (maxY - minY + 200), 1);
+    this.panzoom.zoom(scale, { animate: false });
+    this.panzoom.pan(window.innerWidth / 2 - ((minX + maxX) / 2) * scale, window.innerHeight / 2 - ((minY + maxY) / 2) * scale, { animate: false });
+    this.syncGrid();
   }
 
   private showLoading(show: boolean) {
