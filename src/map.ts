@@ -60,65 +60,68 @@ class WMRManager {
     this.loadCanvas(MAIN_CANVAS);
   }
 
-  // --- Background Stars (Three.js) ---
   private initStars() {
     const canvas = document.getElementById('stars-canvas') as HTMLCanvasElement;
     this.starScene = new THREE.Scene();
-    this.starCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-    this.starRenderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+    this.starCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+    this.starRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     this.starRenderer.setSize(window.innerWidth, window.innerHeight);
 
     const geo = new THREE.BufferGeometry();
-    const count = 2000;
+    const count = 3000;
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count * 3; i++) {
-      pos[i] = (Math.random() - 0.5) * 3000;
+      pos[i] = (Math.random() - 0.5) * 4000;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     
-    const mat = new THREE.PointsMaterial({ size: 2, color: 0x00ff9d, transparent: true, opacity: 0.5 });
+    const mat = new THREE.PointsMaterial({ size: 2, color: 0x00ff9d, transparent: true, opacity: 0.4 });
     this.starField = new THREE.Points(geo, mat);
     this.starScene.add(this.starField);
 
     const animate = () => {
       requestAnimationFrame(animate);
       if (this.starField) {
-        this.starField.rotation.y += 0.0002;
-        this.starField.rotation.x += 0.0001;
+        this.starField.rotation.y += 0.0001;
       }
       this.starRenderer?.render(this.starScene!, this.starCamera!);
     };
     animate();
 
     window.addEventListener('resize', () => {
-      this.starCamera!.aspect = window.innerWidth / window.innerHeight;
-      this.starCamera!.updateProjectionMatrix();
-      this.starRenderer!.setSize(window.innerWidth, window.innerHeight);
+      if (!this.starCamera || !this.starRenderer) return;
+      this.starCamera.aspect = window.innerWidth / window.innerHeight;
+      this.starCamera.updateProjectionMatrix();
+      this.starRenderer.setSize(window.innerWidth, window.innerHeight);
     });
   }
 
-  // --- Viewport & Navigation ---
   private initPanzoom() {
+    // Correction : canvas: false car le container est une div
     this.panzoom = Panzoom(this.container, {
       maxScale: 5,
-      minScale: 0.02,
-      canvas: true,
+      minScale: 0.01,
+      contain: 'outside',
+      startScale: 0.2
     });
 
     const viewport = document.getElementById('map-viewport')!;
+    
+    // Zoom à la molette fluide
     viewport.addEventListener('wheel', (e) => {
       this.panzoom.zoomWithWheel(e);
       this.updateZoomDisplay();
     });
 
+    // Effet parallaxe sur les étoiles
     this.container.addEventListener('panzoomchange', (e: any) => {
       const { x, y, scale } = e.detail;
-      // Parallax effect on stars
       if (this.starField) {
-        this.starField.position.x = -x * 0.1;
-        this.starField.position.y = y * 0.1;
-        this.starCamera!.position.z = 500 / scale;
+        this.starField.position.x = -x * 0.05;
+        this.starField.position.y = y * 0.05;
+        this.starField.scale.setScalar(1 + scale * 0.1);
       }
+      this.updateZoomDisplay();
     });
   }
 
@@ -133,16 +136,13 @@ class WMRManager {
   private setupControls() {
     document.getElementById('zoom-in')?.addEventListener('click', () => {
       this.panzoom.zoomIn();
-      this.updateZoomDisplay();
     });
     document.getElementById('zoom-out')?.addEventListener('click', () => {
       this.panzoom.zoomOut();
-      this.updateZoomDisplay();
     });
     document.getElementById('zoom-reset')?.addEventListener('click', () => {
       this.panzoom.reset();
       this.centerOnContent();
-      this.updateZoomDisplay();
     });
   }
 
@@ -152,9 +152,10 @@ class WMRManager {
     this.history.forEach((path, index) => {
       const span = document.createElement('span');
       span.className = `crumb ${index === this.history.length - 1 ? 'active' : ''}`;
-      // Display only filename without extension
-      span.textContent = path.split('/').pop()?.replace('.canvas', '') || 'WMR';
-      span.onclick = () => {
+      const name = path.split('/').pop()?.replace('.canvas', '') || 'WMR';
+      span.textContent = name;
+      span.onclick = (e) => {
+        e.stopPropagation();
         if (index < this.history.length - 1) {
           this.history = this.history.slice(0, index + 1);
           this.loadCanvas(path, false);
@@ -164,9 +165,10 @@ class WMRManager {
     });
   }
 
-  // --- Rendering Logic ---
   private async loadCanvas(path: string, pushToHistory = true) {
+    console.log(`Chargement du canvas : ${path}`);
     this.showLoading(true);
+    
     if (pushToHistory && this.history[this.history.length - 1] !== path) {
       this.history.push(path);
     }
@@ -174,24 +176,26 @@ class WMRManager {
 
     try {
       const response = await fetch(`${VAULT_ROOT}${path}`);
-      if (!response.ok) throw new Error("Erreur de chargement");
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data: CanvasData = await response.json();
       
       this.nodesLayer.innerHTML = '';
       this.svgLayer.innerHTML = '';
 
-      // Render Groups first (background)
+      // 1. Groupes (Fond)
       data.nodes.filter(n => n.type === 'group').forEach(n => this.renderNode(n));
-      // Render Edges
+      // 2. Liens
       data.edges.forEach(e => this.renderEdge(e, data.nodes));
-      // Render Content nodes
+      // 3. Contenu
       data.nodes.filter(n => n.type !== 'group').forEach(n => this.renderNode(n));
 
-      setTimeout(() => this.centerOnContent(data.nodes), 100);
+      setTimeout(() => this.centerOnContent(data.nodes), 50);
     } catch (err) {
-      console.error(err);
-    } finally {
+      console.error("Erreur critique chargement canvas:", err);
       this.showLoading(false);
+    } finally {
+      // On cache l'overlay après un court délai pour laisser le rendu se faire
+      setTimeout(() => this.showLoading(false), 500);
     }
   }
 
@@ -210,29 +214,34 @@ class WMRManager {
     }
 
     if (node.type === 'group') {
-      el.innerHTML = `<div class="group-label">${node.label || ''}</div>`;
+      el.innerHTML = `<div class="group-label">${node.label || 'Sans nom'}</div>`;
     } 
     else if (node.type === 'text') {
       el.innerHTML = marked.parse(node.text || '') as string;
     } 
     else if (node.type === 'file' && node.file) {
-      const isCanvas = node.file.endsWith('.canvas');
+      const isCanvas = node.file.toLowerCase().endsWith('.canvas');
       if (isCanvas) {
         el.innerHTML = `
-          <div class="file-link-card" id="link-${node.id}">
-            <span class="canvas-badge">Canvas</span>
+          <div class="file-link-card" style="height:100%">
+            <span class="canvas-badge">Exploration</span>
             <div class="file-name">${node.file.split('/').pop()?.replace('.canvas', '')}</div>
-            <div class="file-icon">↗</div>
+            <div class="file-icon" style="font-size:2rem; margin-top:10px">📂</div>
+            <div style="font-size:0.7rem; margin-top:auto; opacity:0.5">Cliquer pour entrer</div>
           </div>
         `;
-        el.onclick = () => this.loadCanvas(node.file!);
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.loadCanvas(node.file!);
+        });
       } else {
         el.innerHTML = `
           <div class="file-node-header">
             <span class="file-icon">📄</span>
             <span class="file-name">${node.file.split('/').pop()}</span>
           </div>
-          <div class="file-content">Chargement...</div>
+          <div class="file-content" style="font-size:0.9rem">Chargement du Markdown...</div>
         `;
         this.fetchMD(el.querySelector('.file-content')!, node.file);
       }
@@ -246,10 +255,15 @@ class WMRManager {
     try {
       const res = await fetch(`${VAULT_ROOT}${path}`);
       if (res.ok) {
-        container.innerHTML = marked.parse(await res.text()) as string;
+        const text = await res.text();
+        container.innerHTML = marked.parse(text) as string;
         container.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b as HTMLElement));
+      } else {
+        container.innerHTML = `<span style="color:red">Fichier introuvable: ${path}</span>`;
       }
-    } catch { container.innerHTML = 'Erreur'; }
+    } catch { 
+      container.innerHTML = 'Erreur réseau'; 
+    }
   }
 
   private renderEdge(edge: CanvasEdge, nodes: CanvasNode[]) {
@@ -263,8 +277,8 @@ class WMRManager {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'wmr-edge');
     
-    const dx = Math.abs(end.x - start.x) * 0.5;
-    const dy = Math.abs(end.y - start.y) * 0.5;
+    const dx = Math.abs(end.x - start.x) * 0.4;
+    const dy = Math.abs(end.y - start.y) * 0.4;
     
     let cp1x = start.x, cp1y = start.y, cp2x = end.x, cp2y = end.y;
     if (edge.fromSide === 'right') cp1x += dx; else if (edge.fromSide === 'left') cp1x -= dx;
@@ -290,11 +304,7 @@ class WMRManager {
   }
 
   private centerOnContent(nodes?: CanvasNode[]) {
-    if (!nodes || nodes.length === 0) {
-      this.panzoom.zoom(0.5);
-      this.panzoom.pan(window.innerWidth / 2, window.innerHeight / 2);
-      return;
-    }
+    if (!nodes || nodes.length === 0) return;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(n => {
@@ -304,26 +314,36 @@ class WMRManager {
       maxY = Math.max(maxY, n.y + n.height);
     });
 
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
     const width = maxX - minX;
     const height = maxY - minY;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
 
-    const scale = Math.min(window.innerWidth / (width + 400), window.innerHeight / (height + 400), 1);
+    const padding = 100;
+    const scale = Math.min(
+      window.innerWidth / (width + padding),
+      window.innerHeight / (height + padding),
+      1
+    );
     
-    this.panzoom.zoom(scale);
+    this.panzoom.zoom(scale, { animate: true });
+    
+    // On attend la fin du zoom pour paner correctement
     setTimeout(() => {
       this.panzoom.pan(
         window.innerWidth / 2 - centerX * scale,
-        window.innerHeight / 2 - centerY * scale
+        window.innerHeight / 2 - centerY * scale,
+        { animate: true }
       );
-      this.updateZoomDisplay();
-    }, 10);
+    }, 100);
   }
 
   private showLoading(show: boolean) {
     const overlay = document.getElementById('loading-overlay');
-    if (overlay) overlay.style.opacity = show ? '1' : '0';
+    if (overlay) {
+      if (show) overlay.classList.remove('hidden');
+      else overlay.classList.add('hidden');
+    }
   }
 }
 
