@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('%c WMR - Presentation %c Loaded ', 
-    'background: #00ff9d; color: #05070a; font-weight: bold; padding: 4px; border-radius: 4px 0 0 4px;',
-    'background: #161b22; color: #e0e0e0; padding: 4px; border-radius: 0 4px 4px 0;'
-  );
-
   initStars();
   initRevealOnScroll();
 });
@@ -22,7 +17,6 @@ function initStars() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  // Création des étoiles
   const geo = new THREE.BufferGeometry();
   const count = 1500;
   const pos = new Float32Array(count * 3);
@@ -30,14 +24,7 @@ function initStars() {
     pos[i] = (Math.random() - 0.5) * 3000;
   }
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  
-  const mat = new THREE.PointsMaterial({ 
-    size: 2, 
-    color: 0x00ff9d, 
-    transparent: true, 
-    opacity: 0.5 
-  });
-  
+  const mat = new THREE.PointsMaterial({ size: 2, color: 0x00ff9d, transparent: true, opacity: 0.5 });
   const stars = new THREE.Points(geo, mat);
   scene.add(stars);
 
@@ -58,17 +45,14 @@ function initStars() {
 
 function initRevealOnScroll() {
   const sections = document.querySelectorAll('section');
-  
-  const reveal = (entries: IntersectionObserverEntry[]) => {
+  const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         (entry.target as HTMLElement).style.opacity = '1';
         (entry.target as HTMLElement).style.transform = 'translateY(0)';
       }
     });
-  };
-
-  const observer = new IntersectionObserver(reveal, { threshold: 0.15 });
+  }, { threshold: 0.15 });
 
   sections.forEach(section => {
     section.style.opacity = '0';
