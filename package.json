@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/marked": "^5.0.2",
     "@types/three": "^0.183.1",
     "typescript": "~5.9.3",
     "vite": "^8.0.0-beta.13"
@@ -17,6 +18,9 @@
     "vite": "^8.0.0-beta.13"
   },
   "dependencies": {
+    "@panzoom/panzoom": "^4.6.1",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.4",
     "three": "^0.183.2"
   }
 }
